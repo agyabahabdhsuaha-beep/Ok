@@ -1,15 +1,15 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.js", "use": "@vercel/node" },
-    { "src": "api/upload.js", "use": "@vercel/node" },
-    { "src": "api/raw.js", "use": "@vercel/node" }
+    { "src": "api/Oneindex.js", "use": "@vercel/node" },
+    { "src": "api/Oneupload.js", "use": "@vercel/node" },
+    { "src": "api/Oneraw.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/raw", "dest": "/api/raw.js" },
-    { "src": "/api/upload", "dest": "/api/upload.js" },
-    { "src": "/public/(.*)", "dest": "/public/$1" },
-    { "src": "/(.*)", "dest": "/api/index.js" }
+    { "src": "/api/Oneraw", "dest": "/api/Oneraw.js" },
+    { "src": "/api/Ondupload", "dest": "/api/Oneupload.js" },
+    { "src": "/Onepublic/(.*)", "dest": "/Onepublic/$1" },
+    { "src": "/(.*)", "dest": "/api/Oneindex.js" }
   ],
-  "outputDirectory": "public"
+  "outputDirectory": "Onepublic"
 }
