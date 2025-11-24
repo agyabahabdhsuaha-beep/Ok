@@ -11,29 +11,25 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Get name from path parameter
-  const pathParts = req.url.split('/');
-  const name = pathParts[pathParts.length - 1];
-  const userAgent = (req.headers["user-agent"] || "").toLowerCase();
-
-  console.log(`[RAW] Request for: ${name}, UA: ${userAgent}`);
-
-  if (!name || name === "") {
-    return res.status(400).send("Error: No script name");
-  }
-
   try {
+    const pathParts = req.url.split('/');
+    const name = pathParts[pathParts.length - 1];
+
+    if (!name || name === "" || name === "raw") {
+      return res.status(400).send("Error: No script name");
+    }
+
     const script = await getScript(name);
     
     if (!script) {
-      console.warn(`[RAW] Script not found: ${name}`);
+      console.warn(`❌ Script not found: ${name}`);
       return res.status(404).send("Not found");
     }
 
-    console.log(`[RAW] Served: ${name} (${script.content.length} bytes)`);
+    console.log(`✅ Served: ${name} (${script.content.length} bytes)`);
     res.status(200).send(script.content);
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("❌ Raw endpoint error:", err.message);
     res.status(500).send("Error");
   }
 }
