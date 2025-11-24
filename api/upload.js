@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;
-    const rawLink = `${protocol}://${host}/api/raw?name=${name}`;
+    const rawLink = `${protocol}://${host}/api/raw/${name}`;
 
     console.log(`✅ Script created: ${name}`);
     res.status(200).json({ id, name, raw: rawLink });
