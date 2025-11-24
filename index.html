@@ -325,6 +325,51 @@
         <p>v2.1 | Bảo vệ Script Lua</p>
       </div>
     </div>
+
+    <!-- Debug Panel -->
+    <div id="debugPanel" class="mt-8 mb-6 bg-gray-900 border-2 border-gray-700 rounded-lg p-4 font-mono text-xs">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+        <h3 class="font-bold text-gray-300 flex items-center gap-2">
+          <i class="fas fa-bug text-red-400"></i>DEBUG PANEL
+        </h3>
+        <button onclick="toggleDebugPanel()" class="text-gray-500 hover:text-gray-300 transition">
+          <i class="fas fa-chevron-down" id="debugToggleIcon"></i>
+        </button>
+      </div>
+      
+      <div id="debugContent" class="space-y-2 text-gray-400">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="bg-gray-800 p-2 rounded">
+            <span class="text-gray-500">Server Status:</span>
+            <span id="serverStatus" class="text-green-400 ml-2">🟢 Online</span>
+          </div>
+          <div class="bg-gray-800 p-2 rounded">
+            <span class="text-gray-500">Last Request:</span>
+            <span id="lastRequest" class="text-blue-400 ml-2">-</span>
+          </div>
+          <div class="bg-gray-800 p-2 rounded">
+            <span class="text-gray-500">Response Time:</span>
+            <span id="responseTime" class="text-yellow-400 ml-2">-ms</span>
+          </div>
+          <div class="bg-gray-800 p-2 rounded">
+            <span class="text-gray-500">Scripts Stored:</span>
+            <span id="scriptsCount" class="text-purple-400 ml-2">-</span>
+          </div>
+        </div>
+        
+        <div class="bg-gray-800 p-2 rounded max-h-24 overflow-y-auto">
+          <span class="text-gray-500">Recent Logs:</span>
+          <div id="debugLogs" class="mt-1 space-y-1 text-gray-400">
+            <div class="text-gray-500">No logs yet...</div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-800 p-2 rounded">
+          <span class="text-gray-500">Storage Used:</span>
+          <span id="storageUsed" class="text-cyan-400 ml-2">-</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -513,8 +558,94 @@
       }
     }
 
+    // Debug Panel Functions
+    let debugLogs = [];
+    let debugCollapsed = false;
+
+    function addDebugLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+      debugLogs.unshift({ msg: `${icon} ${message}`, type, time });
+      if (debugLogs.length > 15) debugLogs.pop();
+      updateDebugLogs();
+    }
+
+    function updateDebugLogs() {
+      const debugLogsDiv = document.getElementById('debugLogs');
+      if (debugLogs.length === 0) {
+        debugLogsDiv.innerHTML = '<div class="text-gray-500 text-xs">No logs yet...</div>';
+        return;
+      }
+      debugLogsDiv.innerHTML = debugLogs.map(log => {
+        let color = 'text-gray-400';
+        if (log.type === 'error') color = 'text-red-400';
+        else if (log.type === 'success') color = 'text-green-400';
+        else if (log.type === 'warning') color = 'text-yellow-400';
+        return `<div class="${color} text-xs truncate">${log.msg} <span class="text-gray-500">${log.time}</span></div>`;
+      }).join('');
+    }
+
+    function toggleDebugPanel() {
+      debugCollapsed = !debugCollapsed;
+      const content = document.getElementById('debugContent');
+      const icon = document.getElementById('debugToggleIcon');
+      
+      if (debugCollapsed) {
+        content.classList.add('hidden');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+      } else {
+        content.classList.remove('hidden');
+        icon.classList.add('fa-chevron-down');
+        icon.classList.remove('fa-chevron-up');
+      }
+    }
+
+    function updateDebugInfo() {
+      // Get local storage size
+      let storageSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          storageSize += localStorage[key].length;
+        }
+      }
+      document.getElementById('storageUsed').textContent = (storageSize / 1024).toFixed(2) + ' KB';
+      
+      // Scripts count
+      const history = JSON.parse(localStorage.getItem('monlua_history') || '[]');
+      document.getElementById('scriptsCount').textContent = history.length;
+    }
+
+    // Intercept fetch for debug logging
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+      const startTime = performance.now();
+      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      const method = (args[1]?.method || 'GET').toUpperCase();
+      
+      return originalFetch.apply(this, args).then(async response => {
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(0);
+        const endpoint = url.split('/').pop() || 'root';
+        document.getElementById('responseTime').textContent = duration + 'ms';
+        document.getElementById('lastRequest').textContent = endpoint;
+        
+        if (response.ok) {
+          addDebugLog(`${method} /${endpoint} → ${response.status} (${duration}ms)`, 'success');
+        } else {
+          addDebugLog(`${method} /${endpoint} → ${response.status} (${duration}ms)`, 'warning');
+        }
+        return response;
+      }).catch(error => {
+        addDebugLog(`${method} /${url.split('/').pop()} Failed: ${error.message}`, 'error');
+        throw error;
+      });
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
       updateHistoryUI();
+      updateDebugInfo();
+      addDebugLog('Page loaded');
       
       document.getElementById('copyBtn').addEventListener('click', () => {
         const link = document.getElementById('rawLink').value;
