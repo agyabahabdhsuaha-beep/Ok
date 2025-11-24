@@ -16,8 +16,12 @@ export default async function handler(req, res) {
 
   const { text, name } = req.body || {};
 
-  if (!text) return res.status(400).json({ error: "❌ Mã code không được để trống" });
-  if (!name) return res.status(400).json({ error: "❌ Vui lòng nhập tên script" });
+  if (!text) {
+    return res.status(400).json({ error: "❌ Mã code không được để trống" });
+  }
+  if (!name) {
+    return res.status(400).json({ error: "❌ Vui lòng nhập tên script" });
+  }
 
   if (!/^[a-zA-Z0-9\-]{1,50}$/.test(name)) {
     return res.status(400).json({ error: "❌ Tên script chỉ được chứa chữ cái, số, và dấu gạch ngang (-)" });
@@ -33,7 +37,6 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: "❌ Tên này đã được sử dụng. Vui lòng chọn tên khác" });
     }
 
-    // Store code WITHOUT zero-width characters for Roblox compatibility
     const id = randomUUID();
     await addScript(name, { id, content: text, createdAt: new Date().toISOString() });
 
@@ -42,9 +45,9 @@ export default async function handler(req, res) {
     const rawLink = `${protocol}://${host}/api/raw/${name}`;
 
     console.log(`✅ Script created: ${name}`);
-    res.status(200).json({ id, name, raw: rawLink });
+    return res.status(200).json({ id, name, raw: rawLink });
   } catch (err) {
-    console.error("Error:", err.message);
-    res.status(500).json({ error: `❌ Lỗi tạo link: ${err.message}` });
+    console.error("❌ Upload error:", err.message);
+    return res.status(500).json({ error: "❌ Lỗi tạo link" });
   }
 }
