@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { storage, addScript } from "./storage.js";
+import { addScript, scriptExists } from "./storage.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -28,16 +28,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (storage[name]) {
+    const exists = await scriptExists(name);
+    if (exists) {
       return res.status(409).json({ error: "❌ Tên này đã được sử dụng. Vui lòng chọn tên khác" });
     }
 
-    const ZWJ = '\u200D';
-    const invisibleCode = text.split('').map(char => ZWJ + char).join('');
-    console.log(`🛡️  Code protected (invisible - zero-width characters)`);
-
+    // Store code WITHOUT zero-width characters for Roblox compatibility
     const id = randomUUID();
-    addScript(name, { id, content: invisibleCode, createdAt: new Date().toISOString() });
+    await addScript(name, { id, content: text, createdAt: new Date().toISOString() });
 
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;
