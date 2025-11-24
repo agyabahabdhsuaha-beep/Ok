@@ -9,7 +9,8 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const name = req.query.name;
+  // Get name from path or query
+  const name = req.query.name || (req.url ? req.url.split('/').pop() : null);
   const userAgent = (req.headers["user-agent"] || "").toLowerCase();
 
   if (!name) {
