@@ -433,7 +433,14 @@
         body: JSON.stringify({ text, name })
       });
       
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        const text = await res.text();
+        throw new Error(text || 'Lỗi không xác định từ server');
+      }
+      
       if (!res.ok) throw new Error(data.error || 'Lỗi khi tạo link');
       return data;
     }
