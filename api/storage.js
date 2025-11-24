@@ -1,20 +1,19 @@
-import { Redis } from "@upstash/redis";
-
 let memoryStorage = {};
 let redis = null;
 
 // Initialize Redis if credentials exist
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  try {
+try {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const { Redis } = await import("@upstash/redis");
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
     console.log("✅ Redis connected");
-  } catch (e) {
-    console.error("❌ Redis error:", e.message);
-    redis = null;
   }
+} catch (e) {
+  console.log("ℹ️ Using memory storage:", e.message);
+  redis = null;
 }
 
 export async function getScript(name) {
@@ -23,7 +22,7 @@ export async function getScript(name) {
   try {
     if (redis) {
       const data = await redis.get(`script:${name}`);
-      if (data) return JSON.parse(data);
+      if (data) return typeof data === 'string' ? JSON.parse(data) : data;
     }
   } catch (e) {
     console.error("Redis get error:", e.message);
@@ -61,4 +60,46 @@ export async function scriptExists(name) {
   }
   
   return name in memoryStorage;
+}
+
+export async function getAllScripts() {
+  const scripts = [];
+  
+  try {
+    if (redis) {
+      const keys = await redis.keys("script:*");
+      for (const key of keys) {
+        const data = await redis.get(key);
+        if (data) {
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          if (parsed.public) {
+            const preview = parsed.content.replace(/\u200D/g, '').substring(0, 200);
+            scripts.push({
+              name: key.replace("script:", ""),
+              username: parsed.username || "Anonymous",
+              createdAt: parsed.createdAt,
+              preview: preview
+            });
+          }
+        }
+      }
+      return scripts;
+    }
+  } catch (e) {
+    console.error("Redis getAllScripts error:", e.message);
+  }
+  
+  for (const [name, data] of Object.entries(memoryStorage)) {
+    if (data.public) {
+      const preview = data.content.replace(/\u200D/g, '').substring(0, 200);
+      scripts.push({
+        name,
+        username: data.username || "Anonymous",
+        createdAt: data.createdAt,
+        preview: preview
+      });
+    }
+  }
+  
+  return scripts;
 }
