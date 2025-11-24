@@ -1,31 +1,16 @@
 import { randomUUID } from "crypto";
-import fs from "fs-extra";
-import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STORAGE_FILE = path.join(__dirname, "..", "scripts.json");
-
-async function loadStorage() {
-  try {
-    if (await fs.pathExists(STORAGE_FILE)) {
-      return await fs.readJSON(STORAGE_FILE);
-    }
-  } catch (err) {
-    console.error("Load error:", err.message);
-  }
-  return {};
-}
-
-async function saveStorage(data) {
-  try {
-    await fs.writeJSON(STORAGE_FILE, data, { spaces: 2 });
-  } catch (err) {
-    console.error("Save error:", err.message);
-  }
-}
+let storage = {};
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -44,8 +29,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    let storage = await loadStorage();
-
     if (storage[name]) {
       return res.status(409).json({ error: "❌ Tên này đã được sử dụng. Vui lòng chọn tên khác" });
     }
@@ -56,7 +39,6 @@ export default async function handler(req, res) {
 
     const id = randomUUID();
     storage[name] = { id, content: invisibleCode, createdAt: new Date().toISOString() };
-    await saveStorage(storage);
 
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;
@@ -66,6 +48,6 @@ export default async function handler(req, res) {
     res.status(200).json({ id, name, raw: rawLink });
   } catch (err) {
     console.error("Error:", err.message);
-    res.status(500).json({ error: "❌ Lỗi tạo link. Vui lòng thử lại" });
+    res.status(500).json({ error: `❌ Lỗi tạo link: ${err.message}` });
   }
 }
