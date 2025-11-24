@@ -52,10 +52,11 @@ app.get("/", async (req, res) => {
 
 // Create raw link
 app.post("/api/upload", async (req, res) => {
-  const { text, name } = req.body || {};
+  const { text, name, username } = req.body || {};
 
   if (!text) return res.status(400).json({ error: "❌ Mã code không được để trống" });
   if (!name) return res.status(400).json({ error: "❌ Vui lòng nhập tên script" });
+  if (!username) return res.status(400).json({ error: "❌ Username không xác định" });
 
   if (!/^[a-zA-Z0-9\-]{1,50}$/.test(name)) {
     return res.status(400).json({ error: "❌ Tên script chỉ được chứa chữ cái, số, và dấu gạch ngang (-)" });
@@ -71,24 +72,62 @@ app.post("/api/upload", async (req, res) => {
 
   try {
     // Make code invisible using zero-width characters
-    // Each character becomes: ZWJ + original char
     const ZWJ = '\u200D'; // Zero Width Joiner
     const invisibleCode = text.split('').map(char => ZWJ + char).join('');
     console.log(`🛡️  Code protected (invisible - zero-width characters)`);
 
     const id = randomUUID();
-    storage[name] = { id, content: invisibleCode, createdAt: new Date().toISOString() };
+    storage[name] = { 
+      id, 
+      content: invisibleCode, 
+      createdAt: new Date().toISOString(),
+      username: username,
+      public: true
+    };
     await saveStorage(storage);
 
     const protocol = req.headers["x-forwarded-proto"] || "http";
     const host = req.headers.host;
     const rawLink = `${protocol}://${host}/api/raw/${name}`;
 
-    console.log(`✅ Script created: ${name}`);
+    console.log(`✅ Script created by ${username}: ${name}`);
     res.json({ id, name, raw: rawLink });
   } catch (err) {
     console.error("Error:", err.message);
     res.status(500).json({ error: "❌ Lỗi tạo link. Vui lòng thử lại" });
+  }
+});
+
+// Get all public scripts with preview
+app.get("/api/public-scripts", async (req, res) => {
+  try {
+    const scripts = [];
+    for (const [name, data] of Object.entries(storage)) {
+      if (data.public) {
+        const cleanCode = data.content.replace(/\u200D/g, '');
+        const preview = cleanCode.substring(0, 200);
+        scripts.push({
+          name,
+          username: data.username || "Anonymous",
+          createdAt: data.createdAt,
+          preview: preview
+        });
+      }
+    }
+    res.json(scripts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  } catch (err) {
+    console.error("Error:", err.message);
+    res.status(500).json({ error: "Lỗi lấy danh sách script" });
+  }
+});
+
+// Get total scripts count
+app.get("/api/stats", async (req, res) => {
+  try {
+    const totalScripts = Object.values(storage).filter(s => s.public).length;
+    res.json({ totalScripts });
+  } catch (err) {
+    res.status(500).json({ error: "Lỗi lấy thống kê" });
   }
 });
 
