@@ -1,4 +1,6 @@
-import { getScript, getAllScripts } from "./storage.js";
+import { initDb, getScript, getAllScripts } from "./db.js";
+
+await initDb();
 
 export default async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,14 +16,15 @@ export default async (req, res) => {
     if (name === "public-scripts") {
       const scripts = await getAllScripts();
       res.setHeader("Content-Type", "application/json");
-      res.status(200).json(scripts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      res.status(200).json(scripts);
       return;
     }
 
     const script = await getScript(name);
-    if (!script) return res.status(404).send("Script not found");
+    if (!script) {
+      return res.status(404).send("Script not found");
+    }
 
-    // Remove zero-width characters before sending
     const cleanCode = script.content.replace(/\u200D/g, '');
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.status(200).send(cleanCode);
