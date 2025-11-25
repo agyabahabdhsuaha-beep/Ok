@@ -36,6 +36,10 @@ async function saveStorage(data) {
 }
 
 let storage = await loadStorage();
+let users = [
+  { username: 'user', password: '123456' },
+  { username: 'mcjthebest', password: 'therealMcj2' }
+];
 
 // Serve index.html
 app.get("/", async (req, res) => {
@@ -129,6 +133,40 @@ app.get("/api/stats", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Lỗi lấy thống kê" });
   }
+});
+
+// Login endpoint
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body || {};
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: "❌ Vui lòng nhập username và password" });
+  }
+
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+  
+  if (!user) {
+    return res.status(401).json({ error: "❌ Username hoặc password sai" });
+  }
+
+  res.json({ username: user.username });
+});
+
+// Signup endpoint
+app.post("/api/signup", async (req, res) => {
+  const { username, password } = req.body || {};
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: "❌ Vui lòng nhập username và password" });
+  }
+
+  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    return res.status(409).json({ error: "❌ Username đã tồn tại" });
+  }
+
+  users.push({ username, password });
+  console.log(`✅ New user registered: ${username}`);
+  res.json({ username, success: true });
 });
 
 // Get raw script - only allow Roblox client
