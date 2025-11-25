@@ -3,10 +3,14 @@
   "builds": [
     { "src": "api/upload.js", "use": "@vercel/node" },
     { "src": "api/raw.js", "use": "@vercel/node" },
+    { "src": "api/login.js", "use": "@vercel/node" },
+    { "src": "api/signup.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/upload", "dest": "/api/upload.js" },
+    { "src": "/api/login", "dest": "/api/login.js" },
+    { "src": "/api/signup", "dest": "/api/signup.js" },
     { "src": "/api/raw/(.*)", "dest": "/api/raw.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
