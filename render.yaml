@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: luaprotector
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node dev-script.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+    envVarRefs:
+      - envVar: DATABASE_URL
+        serviceId: luaprotector-db
+        type: ConnectionString
+
+databases:
+  - name: luaprotector-db
+    databaseName: luaprotector
+    user: luaprotector
+    region: singapore
+    plan: free
