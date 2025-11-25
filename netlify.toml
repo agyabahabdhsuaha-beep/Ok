@@ -1,9 +1,30 @@
 [build]
+  command = "echo 'Build complete'"
   functions = "api"
   publish = "."
 
 [[redirects]]
-  from = "/"
+  from = "/api/login"
+  to = "/.netlify/functions/login"
+  status = 200
+
+[[redirects]]
+  from = "/api/signup"
+  to = "/.netlify/functions/signup"
+  status = 200
+
+[[redirects]]
+  from = "/api/upload"
+  to = "/.netlify/functions/upload"
+  status = 200
+
+[[redirects]]
+  from = "/api/raw/*"
+  to = "/.netlify/functions/raw"
+  status = 200
+
+[[redirects]]
+  from = "/*"
   to = "/index.html"
   status = 200
 
