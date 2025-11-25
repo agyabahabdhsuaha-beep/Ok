@@ -133,7 +133,25 @@
           <p class="text-gray-400 text-sm mt-2">Bảo vệ Script Lua của bạn</p>
         </div>
         
-        <div class="space-y-4">
+        <div class="flex gap-2 mb-6 border-b border-gray-700">
+          <button 
+            onclick="switchAuthMode('login')" 
+            id="loginTab"
+            class="flex-1 py-3 text-center font-semibold border-b-2 border-blue-400 text-blue-400 transition"
+          >
+            Đăng Nhập
+          </button>
+          <button 
+            onclick="switchAuthMode('signup')" 
+            id="signupTab"
+            class="flex-1 py-3 text-center font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-300 transition"
+          >
+            Đăng Ký
+          </button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm" class="space-y-4">
           <div>
             <label class="block text-sm font-semibold mb-2">Username</label>
             <input 
@@ -165,6 +183,50 @@
             <p class="flex items-center gap-2 text-red-200 text-xs">
               <i class="fas fa-exclamation-circle"></i>
               <span id="loginErrorMsg"></span>
+            </p>
+          </div>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div id="signupForm" class="hidden space-y-4">
+          <div>
+            <label class="block text-sm font-semibold mb-2">Username</label>
+            <input 
+              id="signupUsername" 
+              type="text" 
+              placeholder="Tạo username" 
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white input-focus text-sm"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold mb-2">Password</label>
+            <input 
+              id="signupPassword" 
+              type="password" 
+              placeholder="Tạo password" 
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white input-focus text-sm"
+            />
+          </div>
+          
+          <button 
+            onclick="handleSignup()" 
+            class="w-full btn-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm"
+          >
+            <i class="fas fa-user-plus"></i>Đăng Ký
+          </button>
+          
+          <div id="signupError" class="hidden p-3 bg-red-900 border border-red-700 rounded-lg">
+            <p class="flex items-center gap-2 text-red-200 text-xs">
+              <i class="fas fa-exclamation-circle"></i>
+              <span id="signupErrorMsg"></span>
+            </p>
+          </div>
+
+          <div id="signupSuccess" class="hidden p-3 bg-green-900 border border-green-700 rounded-lg">
+            <p class="flex items-center gap-2 text-green-200 text-xs">
+              <i class="fas fa-check-circle"></i>
+              <span id="signupSuccessMsg"></span>
             </p>
           </div>
         </div>
@@ -451,6 +513,30 @@
   </div>
 
   <script>
+    // AUTH MODE SWITCHING
+    function switchAuthMode(mode) {
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const loginTab = document.getElementById('loginTab');
+      const signupTab = document.getElementById('signupTab');
+      
+      if (mode === 'login') {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        loginTab.classList.add('border-blue-400', 'text-blue-400');
+        loginTab.classList.remove('border-transparent', 'text-gray-400');
+        signupTab.classList.remove('border-blue-400', 'text-blue-400');
+        signupTab.classList.add('border-transparent', 'text-gray-400');
+      } else {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        signupTab.classList.add('border-blue-400', 'text-blue-400');
+        signupTab.classList.remove('border-transparent', 'text-gray-400');
+        loginTab.classList.remove('border-blue-400', 'text-blue-400');
+        loginTab.classList.add('border-transparent', 'text-gray-400');
+      }
+    }
+
     // PAGE NAVIGATION
     function showPage(pageName) {
       document.getElementById('loginPage').classList.add('hidden');
@@ -470,14 +556,9 @@
     }
 
     // LOGIN FUNCTIONS
-    const validAccounts = [
-      { username: 'user', password: '123456' },
-      { username: 'mcjthebest', password: 'therealMcj2' }
-    ];
-
-    function handleLogin() {
-      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
-      const password = document.getElementById('loginPassword').value.trim().toLowerCase();
+    async function handleLogin() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
       const errorDiv = document.getElementById('loginError');
       const errorMsg = document.getElementById('loginErrorMsg');
 
@@ -487,22 +568,77 @@
         return;
       }
 
-      // Case-insensitive login check
-      const account = validAccounts.find(acc => 
-        acc.username === username && 
-        acc.password.toLowerCase() === password
-      );
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
 
-      if (account) {
-        localStorage.setItem('user', account.username);
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Đăng nhập thất bại';
+          errorDiv.classList.remove('hidden');
+          addDebugLog('Login failed', 'error');
+          return;
+        }
+
+        localStorage.setItem('user', data.username);
         errorDiv.classList.add('hidden');
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
         showPage('dashboardPage');
         updateDashboard();
-        addDebugLog(`User ${account.username} logged in`, 'success');
-      } else {
-        errorMsg.textContent = 'Username hoặc password sai';
+        addDebugLog(`User ${data.username} logged in`, 'success');
+      } catch (err) {
+        errorMsg.textContent = 'Lỗi kết nối server';
         errorDiv.classList.remove('hidden');
-        addDebugLog('Login failed', 'error');
+        addDebugLog('Login error: ' + err.message, 'error');
+      }
+    }
+
+    async function handleSignup() {
+      const username = document.getElementById('signupUsername').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+      const errorDiv = document.getElementById('signupError');
+      const errorMsg = document.getElementById('signupErrorMsg');
+
+      errorDiv.classList.add('hidden');
+
+      if (!username || !password) {
+        errorMsg.textContent = 'Vui lòng điền tất cả các trường';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Đăng ký thất bại';
+          errorDiv.classList.remove('hidden');
+          addDebugLog('Signup failed', 'error');
+          return;
+        }
+
+        localStorage.setItem('user', data.username);
+        document.getElementById('signupUsername').value = '';
+        document.getElementById('signupPassword').value = '';
+        addDebugLog(`User ${username} signed up and logged in`, 'success');
+        
+        showPage('dashboardPage');
+        updateDashboard();
+      } catch (err) {
+        errorMsg.textContent = 'Lỗi kết nối server';
+        errorDiv.classList.remove('hidden');
+        addDebugLog('Signup error: ' + err.message, 'error');
       }
     }
 
