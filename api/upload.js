@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
-import { addScript, scriptExists } from "./storage.js";
+import { initDb, addScript, scriptExists } from "./db.js";
+
+await initDb();
 
 export default async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,13 +31,13 @@ export default async (req, res) => {
     const ZWJ = '\u200D';
     const invisibleCode = text.split('').map(char => ZWJ + char).join('');
     const id = randomUUID();
-    await addScript(name, { id, content: invisibleCode, createdAt: new Date().toISOString(), username, public: true });
+    
+    await addScript(name, id, invisibleCode, username);
 
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;
     const raw = `${protocol}://${host}/api/raw/${name}`;
-
-    console.log(`✅ Script created by ${username}: ${name}`);
+    
     res.status(200).json({ id, name, raw });
   } catch (err) {
     console.error("Upload error:", err);
