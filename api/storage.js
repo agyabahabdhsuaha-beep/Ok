@@ -2,18 +2,20 @@ let memoryStorage = {};
 let redis = null;
 
 // Initialize Redis if credentials exist
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { Redis } = await import("@upstash/redis");
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  try {
+    const { Redis } = require("@upstash/redis");
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
     console.log("✅ Redis connected");
+  } catch (e) {
+    console.log("ℹ️ Redis unavailable, using memory storage:", e.message);
+    redis = null;
   }
-} catch (e) {
-  console.log("ℹ️ Using memory storage:", e.message);
-  redis = null;
+} else {
+  console.log("ℹ️ No Redis credentials, using memory storage");
 }
 
 export async function getScript(name) {
